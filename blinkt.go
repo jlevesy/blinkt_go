@@ -104,7 +104,7 @@ func (bl *Blinkt) Clear() {
 // Show updates the LEDs with the values from SetPixel/Clear.
 func (bl *Blinkt) Show() {
 	sof()
-	for p, _ := range bl.pixels {
+	for p := range bl.pixels {
 		brightness := bl.pixels[p][brightnessIndex]
 		r := bl.pixels[p][redIndex]
 		g := bl.pixels[p][greenIndex]
@@ -118,12 +118,33 @@ func (bl *Blinkt) Show() {
 		writeByte(r)
 	}
 	eof()
+	bl.writtenPixels = []int{}
+}
+
+// ShowPartial will update pixels value for the
+func (bl *Blinkt) ShowPartial() {
+	sof()
+	for _, p := range bl.writtenPixels {
+		brightness := bl.pixels[p][brightnessIndex]
+		r := bl.pixels[p][redIndex]
+		g := bl.pixels[p][greenIndex]
+		b := bl.pixels[p][blueIndex]
+
+		// 0b11100000 (224)
+		bitwise := 224
+		writeByte(bitwise | brightness)
+		writeByte(b)
+		writeByte(g)
+		writeByte(r)
+	}
+	eof()
+	bl.writtenPixels = []int{}
 }
 
 // SetAll sets all pixels to specified r, g, b colour. Show must be called to update the LEDs.
 func (bl *Blinkt) SetAll(r int, g int, b int) *Blinkt {
 
-	for p, _ := range bl.pixels {
+	for p := range bl.pixels {
 		bl.SetPixel(p, r, g, b)
 	}
 
@@ -137,6 +158,8 @@ func (bl *Blinkt) SetPixel(p int, r int, g int, b int) *Blinkt {
 	bl.pixels[p][greenIndex] = g
 	bl.pixels[p][blueIndex] = b
 
+	bl.writtenPixels = append(bl.writtenPixels, p)
+
 	return bl
 
 }
@@ -146,7 +169,7 @@ func (bl *Blinkt) SetBrightness(brightness float64) *Blinkt {
 
 	brightnessInt := convertBrightnessToInt(brightness)
 
-	for p, _ := range bl.pixels {
+	for p := range bl.pixels {
 		bl.pixels[p][brightnessIndex] = brightnessInt
 	}
 
@@ -163,7 +186,7 @@ func (bl *Blinkt) SetPixelBrightness(p int, brightness float64) *Blinkt {
 
 func initPixels(brightness int) [8][4]int {
 	var pixels [8][4]int
-	for p, _ := range pixels {
+	for p := range pixels {
 		pixels[p][redIndex] = 0
 		pixels[p][greenIndex] = 0
 		pixels[p][blueIndex] = 0
@@ -197,6 +220,8 @@ func NewBlinkt(brightness ...float64) Blinkt {
 // Blinkt use the NewBlinkt function to initialize the pixels property.
 type Blinkt struct {
 	pixels [8][4]int
+
+	writtenPixels []int
 }
 
 func init() {
